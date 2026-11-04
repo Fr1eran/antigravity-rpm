@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Antigravity
+Comment=Google Antigravity Desktop App — Agent orchestration platform
+GenericName=AI Agent Platform
+Exec=/usr/bin/antigravity-app %U
+Icon=antigravity-app
+Type=Application
+StartupNotify=false
+StartupWMClass=antigravity
+Categories=Development;Utility;
+Keywords=antigravity;agent;gemini;

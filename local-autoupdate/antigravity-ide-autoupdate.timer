@@ -2,7 +2,7 @@
 Description=Daily check for Antigravity IDE updates
 
 [Timer]
-# The upstream check-update.yml workflow runs at 06:00 UTC and the COPR
+# The upstream check-update-ide.yml workflow runs at 06:00 UTC and the COPR
 # rebuild typically finishes within a few minutes; 10:00 local time leaves a
 # comfortable buffer.
 OnCalendar=*-*-* 10:00:00

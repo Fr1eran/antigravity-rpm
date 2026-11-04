@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop">
+        <id>antigravity-app.desktop</id>
+        <metadata_license>MIT</metadata_license>
+        <project_license>LicenseRef-proprietary=https://antigravity.google/terms</project_license>
+        <name>Antigravity App</name>
+        <url type="homepage">https://antigravity.google</url>
+        <summary>Google Antigravity App — Agent orchestration platform</summary>
+        <description>
+                <p>Google Antigravity App is a desktop application that can launch
+                and monitor agents on your machine. It provides a unified platform
+                to orchestrate agent activities independently of an IDE.</p>
+                <p>This is an unofficial community package for Fedora.</p>
+        </description>
+</component>

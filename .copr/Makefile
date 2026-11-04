@@ -1,27 +1,32 @@
 # ============================================================================
-# .copr/Makefile — COPR SRPM build integration
+# .copr/Makefile — Universal COPR SRPM build integration
 # ============================================================================
 
-SPEC := antigravity-ide.spec
+TOPDIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
+spec ?= antigravity-ide.spec
+SPEC ?= $(spec)
 outdir ?= $(CURDIR)
 
-URL_X64 = $(shell grep '^# URL_X64:' $(CURDIR)/$(SPEC) | awk '{print $$3}')
-URL_ARM64 = $(shell grep '^# URL_ARM64:' $(CURDIR)/$(SPEC) | awk '{print $$3}')
+# Resolve SPEC path (supports both relative and absolute paths passed by COPR)
+SPEC_PATH := $(if $(filter /%,$(SPEC)),$(SPEC),$(TOPDIR)/$(SPEC))
+
+URL_X64 := $(shell grep '^# URL_X64:' $(SPEC_PATH) | awk '{print $$3}')
+URL_ARM64 := $(shell grep '^# URL_ARM64:' $(SPEC_PATH) | awk '{print $$3}')
+SRC_X64 := $(shell grep '^Source0:' $(SPEC_PATH) | awk '{print $$2}')
+SRC_ARM64 := $(shell grep '^Source1:' $(SPEC_PATH) | awk '{print $$2}')
 
 .PHONY: srpm
 
 srpm:
-	@echo "Downloading x86_64 tarball..."
-	curl -sL -o $(CURDIR)/Antigravity-x64.tar.gz "$(URL_X64)"
-	
-	@echo "Downloading aarch64 tarball..."
-	curl -sL -o $(CURDIR)/Antigravity-arm64.tar.gz "$(URL_ARM64)"
-
-	@echo "Building SRPM..."
+	@echo "Building SRPM for $(SPEC_PATH)..."
+	@echo "Downloading x86_64 tarball ($(SRC_X64))..."
+	curl -sSLf --retry 3 --connect-timeout 30 -o "$(TOPDIR)/$(SRC_X64)" "$(URL_X64)"
+	@echo "Downloading aarch64 tarball ($(SRC_ARM64))..."
+	curl -sSLf --retry 3 --connect-timeout 30 -o "$(TOPDIR)/$(SRC_ARM64)" "$(URL_ARM64)"
+	@echo "Building SRPM in $(outdir)..."
 	rpmbuild -bs \
-		--define "_sourcedir $(CURDIR)" \
-		--define "_specdir $(CURDIR)" \
+		--define "_sourcedir $(TOPDIR)" \
+		--define "_specdir $(TOPDIR)" \
 		--define "_srcrpmdir $(outdir)" \
-		$(CURDIR)/$(SPEC)
-
+		"$(SPEC_PATH)"
 	@echo "SRPM built successfully in $(outdir)"

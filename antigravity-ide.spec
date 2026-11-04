@@ -116,7 +116,7 @@ if [ -f %{buildroot}%{install_dir}/antigravity ] && \
 fi
 
 # Disable the bundled Electron auto-updater. Updates for this package are
-# managed via dnf/COPR (see .github/workflows/check-update.yml), not the
+# managed via dnf/COPR (see .github/workflows/check-update-ide.yml), not the
 # app's own updater — leaving updateUrl pointed at a live endpoint causes
 # spurious "update available" notifications inside the IDE that don't
 # correspond to real dnf updates and can reference unrelated release notes.

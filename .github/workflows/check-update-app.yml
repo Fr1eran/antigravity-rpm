@@ -1,0 +1,105 @@
+name: Check for Antigravity App Updates
+
+on:
+  schedule:
+    - cron: '30 6 * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: repo-update-workflow
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  check-and-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get current spec version
+        id: current
+        run: |
+          VERSION=$(grep -m1 '^Version:' antigravity-app.spec | awk '{print $2}')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current spec version: $VERSION"
+
+      - name: Download and check latest version
+        id: latest
+        run: |
+          bash check-version-app.sh > version_info.txt
+          cat version_info.txt
+          source version_info.txt
+          
+          echo "Latest version: $version"
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "url_x64=$url_x64" >> $GITHUB_OUTPUT
+          echo "url_arm64=$url_arm64" >> $GITHUB_OUTPUT
+
+          # Compare versions
+          CURRENT="${{ steps.current.outputs.version }}"
+          if [[ "$version" != "$CURRENT" ]]; then
+            # Use sort -V to verify it's actually newer (not a downgrade)
+            NEWER=$(printf '%s\n%s' "$CURRENT" "$version" | sort -V | tail -1)
+            if [[ "$NEWER" == "$version" && "$NEWER" != "$CURRENT" ]]; then
+              echo "Update available: $CURRENT → $version"
+              echo "updated=true" >> $GITHUB_OUTPUT
+            else
+              echo "Version $version is not newer than $CURRENT"
+              echo "updated=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "Already up-to-date ($CURRENT)"
+            echo "updated=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update spec file
+        if: steps.latest.outputs.updated == 'true'
+        env:
+          NEW_VERSION: ${{ steps.latest.outputs.version }}
+          URL_X64: ${{ steps.latest.outputs.url_x64 }}
+          URL_ARM64: ${{ steps.latest.outputs.url_arm64 }}
+        run: |
+          # Update URLs in comments
+          sed -i "s|^# URL_X64:.*|# URL_X64:        $URL_X64|" antigravity-app.spec
+          sed -i "s|^# URL_ARM64:.*|# URL_ARM64:      $URL_ARM64|" antigravity-app.spec
+
+          # Update the Version field
+          sed -i "s/^Version:.*/Version:        ${NEW_VERSION}/" antigravity-app.spec
+
+          # Reset Release to 1 for new version
+          sed -i "s/^Release:.*/Release:        1%{?dist}/" antigravity-app.spec
+
+          # Add changelog entry
+          DATE=$(LC_ALL=C date +"%a %b %d %Y")
+          CHANGELOG_ENTRY="* ${DATE} Automated Update <antigravity-rpm@users.noreply.github.com> - ${NEW_VERSION}-1\n- Update to upstream version ${NEW_VERSION}"
+
+          # Insert new changelog entry after %changelog line
+          sed -i "/%changelog/{n;s|^|${CHANGELOG_ENTRY}\n|}" antigravity-app.spec
+
+          echo "Spec file updated to version ${NEW_VERSION}"
+
+      - name: Commit and push
+        if: steps.latest.outputs.updated == 'true'
+        env:
+          NEW_VERSION: ${{ steps.latest.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add antigravity-app.spec
+          git diff --cached --stat
+
+          git commit -m "chore: update to Antigravity App ${NEW_VERSION}"
+          git pull --rebase origin main
+          TAG_NAME="app-v${NEW_VERSION}"
+          git tag -a "$TAG_NAME" -m "Antigravity App ${NEW_VERSION}"
+          git push origin main "$TAG_NAME"
+
+          echo "✅ Committed and tagged ${TAG_NAME}"
+          echo "This push triggers a COPR rebuild automatically via webhook."

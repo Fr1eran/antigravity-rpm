@@ -1,63 +1,99 @@
 #!/bin/bash
 # ============================================================================
-# install.sh — Set up fully automatic local updates for antigravity-ide.
+# install.sh — Set up fully automatic local updates for Antigravity packages.
+#
+# Usage:
+#   ./install.sh [all|ide|app]   (default: all)
 #
 # Installs:
-#   - ~/.local/bin/antigravity-ide-autoupdate.sh   (check + upgrade + notify)
-#   - ~/.config/systemd/user/antigravity-ide-autoupdate.{service,timer}
-#   - /etc/sudoers.d/antigravity-ide-autoupdate     (NOPASSWD for exactly
-#     `dnf upgrade -y antigravity-ide`, nothing broader)
+#   - ~/.local/bin/antigravity-{ide,app}-autoupdate.sh
+#   - ~/.config/systemd/user/antigravity-{ide,app}-autoupdate.{service,timer}
+#   - /etc/sudoers.d/antigravity-ide-autoupdate (scoped NOPASSWD rule for IDE)
+#   - /etc/sudoers.d/antigravity-app-autoupdate (scoped NOPASSWD rule for App)
 #
 # Run this once, interactively, as the user who should receive updates.
-# It will prompt for your sudo password to install the sudoers rule.
+# It will prompt for your sudo password to install the sudoers rule(s).
 # ============================================================================
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_USER="$(id -un)"
+TARGET="${1:-all}"
 
-echo "==> Installing antigravity-ide-autoupdate.sh to ~/.local/bin/"
+INSTALL_IDE=false
+INSTALL_APP=false
+
+case "$TARGET" in
+    ide)
+        INSTALL_IDE=true
+        ;;
+    app)
+        INSTALL_APP=true
+        ;;
+    all|"")
+        INSTALL_IDE=true
+        INSTALL_APP=true
+        ;;
+    *)
+        echo "Usage: $0 [all|ide|app]" >&2
+        exit 1
+        ;;
+esac
+
 mkdir -p "$HOME/.local/bin"
-install -m 755 "$SCRIPT_DIR/antigravity-ide-autoupdate.sh" "$HOME/.local/bin/antigravity-ide-autoupdate.sh"
-
-echo "==> Installing systemd --user unit files"
 mkdir -p "$HOME/.config/systemd/user"
-install -m 644 "$SCRIPT_DIR/antigravity-ide-autoupdate.service" "$HOME/.config/systemd/user/antigravity-ide-autoupdate.service"
-install -m 644 "$SCRIPT_DIR/antigravity-ide-autoupdate.timer" "$HOME/.config/systemd/user/antigravity-ide-autoupdate.timer"
 
-echo "==> Preparing scoped sudoers rule for ${TARGET_USER} (requires sudo password)"
-SUDOERS_TMP="$(mktemp)"
-trap 'rm -f "$SUDOERS_TMP"' EXIT
-cat > "$SUDOERS_TMP" <<EOF
-# Installed by antigravity-ide-rpm/local-autoupdate/install.sh
-# Allows ${TARGET_USER} to run exactly this one dnf upgrade command without a
-# password, for the antigravity-ide-autoupdate systemd --user timer.
-# No other command or package is covered by this rule.
-${TARGET_USER} ALL=(root) NOPASSWD: /usr/bin/dnf upgrade -y antigravity-ide
+install_sudoers_rule() {
+    local pkg="$1"
+    local filename="antigravity-${pkg}-autoupdate"
+    local tmp_file
+    tmp_file="$(mktemp)"
+    
+    cat > "$tmp_file" <<EOF
+# Installed by antigravity-rpm/local-autoupdate/install.sh
+# Scoped NOPASSWD rule for automatic update of ${pkg} for ${TARGET_USER}.
+${TARGET_USER} ALL=(root) NOPASSWD: /usr/bin/dnf upgrade -y antigravity-${pkg}
 EOF
 
-sudo visudo -c -f "$SUDOERS_TMP"
-sudo install -m 0440 -o root -g root "$SUDOERS_TMP" /etc/sudoers.d/antigravity-ide-autoupdate
-echo "    Installed /etc/sudoers.d/antigravity-ide-autoupdate"
+    echo "==> Preparing scoped sudoers rule for antigravity-${pkg} (requires sudo password)"
+    sudo visudo -c -f "$tmp_file"
+    sudo install -m 0440 -o root -g root "$tmp_file" "/etc/sudoers.d/${filename}"
+    rm -f "$tmp_file"
+    echo "    Installed /etc/sudoers.d/${filename}"
+}
 
-echo "==> Enabling the systemd --user timer"
+if [[ "$INSTALL_IDE" == "true" ]]; then
+    echo "==> Configuring autoupdate for Antigravity IDE"
+    install -m 755 "$SCRIPT_DIR/antigravity-ide-autoupdate.sh" "$HOME/.local/bin/antigravity-ide-autoupdate.sh"
+    install -m 644 "$SCRIPT_DIR/antigravity-ide-autoupdate.service" "$HOME/.config/systemd/user/antigravity-ide-autoupdate.service"
+    install -m 644 "$SCRIPT_DIR/antigravity-ide-autoupdate.timer" "$HOME/.config/systemd/user/antigravity-ide-autoupdate.timer"
+    install_sudoers_rule "ide"
+fi
+
+if [[ "$INSTALL_APP" == "true" ]]; then
+    echo "==> Configuring autoupdate for Antigravity App"
+    install -m 755 "$SCRIPT_DIR/antigravity-app-autoupdate.sh" "$HOME/.local/bin/antigravity-app-autoupdate.sh"
+    install -m 644 "$SCRIPT_DIR/antigravity-app-autoupdate.service" "$HOME/.config/systemd/user/antigravity-app-autoupdate.service"
+    install -m 644 "$SCRIPT_DIR/antigravity-app-autoupdate.timer" "$HOME/.config/systemd/user/antigravity-app-autoupdate.timer"
+    install_sudoers_rule "app"
+fi
+
+# Clean up legacy merged sudoers file if it exists
+if [[ -f /etc/sudoers.d/antigravity-autoupdate ]]; then
+    sudo rm -f /etc/sudoers.d/antigravity-autoupdate 2>/dev/null || true
+fi
+
+echo "==> Enabling systemd --user timer(s)"
 systemctl --user daemon-reload
-systemctl --user enable --now antigravity-ide-autoupdate.timer
+
+if [[ "$INSTALL_IDE" == "true" ]]; then
+    systemctl --user enable --now antigravity-ide-autoupdate.timer
+fi
+if [[ "$INSTALL_APP" == "true" ]]; then
+    systemctl --user enable --now antigravity-app-autoupdate.timer
+fi
 
 echo
-echo "Done. Status:"
-systemctl --user list-timers antigravity-ide-autoupdate.timer --no-pager
-
-cat <<'MSG'
-
-From now on, antigravity-ide-autoupdate.timer checks daily and silently runs
-`dnf upgrade -y antigravity-ide` whenever the COPR repo has a newer build,
-then sends a desktop notification. No manual steps required.
-
-Useful commands:
-  systemctl --user status antigravity-ide-autoupdate.timer   # check the timer
-  journalctl --user -t antigravity-ide-autoupdate -e         # see recent runs
-  systemctl --user start antigravity-ide-autoupdate.service  # run a check now
-  systemctl --user disable --now antigravity-ide-autoupdate.timer  # turn it off
-MSG
+echo "Done. Active timers:"
+systemctl --user list-timers "antigravity-*" --no-pager

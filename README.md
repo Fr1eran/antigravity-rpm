@@ -1,11 +1,13 @@
-# Antigravity IDE — Fedora RPM (COPR)
+# Antigravity (IDE & App) — Fedora RPM (COPR)
 
-[![Copr build status](https://copr.fedorainfracloud.org/coprs/pehlivanu/antigravity-ide/package/antigravity-ide/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/pehlivanu/antigravity-ide/)
-[![Daily Update Check](https://github.com/liviuionesi/antigravity-ide-rpm/actions/workflows/check-update.yml/badge.svg)](https://github.com/liviuionesi/antigravity-ide-rpm/actions/workflows/check-update.yml)
+[![Copr build status (IDE)](https://copr.fedorainfracloud.org/coprs/fr1eran/antigravity-rpm/package/antigravity-ide/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/fr1eran/antigravity-rpm/)
+[![Copr build status (App)](https://copr.fedorainfracloud.org/coprs/fr1eran/antigravity-rpm/package/antigravity-app/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/fr1eran/antigravity-rpm/)
+[![Daily Update Check (IDE)](https://github.com/Fr1eran/antigravity-rpm/actions/workflows/check-update-ide.yml/badge.svg)](https://github.com/Fr1eran/antigravity-rpm/actions/workflows/check-update-ide.yml)
+[![Daily Update Check (App)](https://github.com/Fr1eran/antigravity-rpm/actions/workflows/check-update-app.yml/badge.svg)](https://github.com/Fr1eran/antigravity-rpm/actions/workflows/check-update-app.yml)
 
-Unofficial community RPM packaging of [Google Antigravity IDE](https://antigravity.google) for Fedora. Enables native installation and automatic updates via `dnf`.
+Unofficial community RPM packaging of [Google Antigravity](https://antigravity.google) (Antigravity IDE & Antigravity App) for Fedora. Enables native installation and automatic updates via `dnf`.
 
-> **⚠️ Disclaimer**: This is an **unofficial**, community-maintained package. Google Antigravity IDE is proprietary software developed by Google. This repository contains only the packaging scripts (spec file, desktop entries, automation) — the Antigravity IDE binary is **never stored here** and is downloaded directly from Google's servers during the RPM build process. This project is not affiliated with, endorsed by, or sponsored by Google.
+> **⚠️ Disclaimer**: This is an **unofficial**, community-maintained package. Google Antigravity is proprietary software developed by Google. This repository contains only the packaging scripts (spec files, desktop entries, automation) — the binaries are **never stored here** and are downloaded directly from Google's servers during the RPM build process. This project is not affiliated with, endorsed by, or sponsored by Google.
 
 ---
 
@@ -13,13 +15,16 @@ Unofficial community RPM packaging of [Google Antigravity IDE](https://antigravi
 
 ```bash
 # Enable the COPR repository
-sudo dnf copr enable pehlivanu/antigravity-ide
+sudo dnf copr enable fr1eran/antigravity-rpm
 
-# Install Antigravity IDE
+# Install Antigravity IDE 
 sudo dnf install antigravity-ide
+
+# Install Antigravity App
+sudo dnf install antigravity-app
 ```
 
-## 🔄 Keeping Antigravity IDE Updated
+## 🔄 Keeping Antigravity Updated
 
 Once the COPR repo is enabled (see Quick Install above), staying current is
 just:
@@ -30,7 +35,7 @@ sudo dnf upgrade
 
 Run whenever you like — weekly, or as part of your normal `sudo dnf upgrade`
 habit alongside the rest of your system. There's no separate channel or
-extra repo to remember: `antigravity-ide` upgrades exactly like any other
+extra repo to remember: `antigravity-ide` and `antigravity-app` upgrade exactly like any other
 `dnf`-managed package, because a daily pipeline behind the scenes keeps the
 COPR repo itself current (see **How It Works** below), so the new build is
 usually already sitting in the repo by the time you run the command.
@@ -42,7 +47,7 @@ installs new builds automatically, with a desktop notification when it does.
 
 ### Why doesn't the app itself tell me when an update is available?
 
-It deliberately doesn't, on purpose. Antigravity IDE bundles VS Code's own
+It deliberately doesn't, on purpose. Antigravity bundles Electron / VS Code's own
 in-app updater, which independently pings a Google-owned endpoint and shows
 its own "update available" banner — a mechanism this packaging has no
 control over and that isn't aware of what's actually published in this COPR
@@ -73,12 +78,11 @@ authoritative answer.
 Everything from "new version exists" to "the RPM is sitting in the COPR
 repo" runs unattended, with no human in the loop:
 
-1. **Daily Check** (`check-update.yml`, 06:00 UTC): GitHub Actions downloads
-   the latest tarball from `antigravity.google/download` and extracts the
-   version from `product.json`.
-2. **Auto-Update**: If it's newer than the version currently in
-   `antigravity-ide.spec`, the workflow updates the spec, commits, and tags
-   `vX.Y.Z` on `main`.
+1. **Daily Check**:
+   - `check-update-ide.yml` (06:00 UTC): Checks for Antigravity IDE updates via `check-version-ide.sh`.
+   - `check-update-app.yml` (06:30 UTC): Checks for Antigravity App updates via `check-version-app.sh`.
+2. **Auto-Update**: If newer versions are detected, workflows update `antigravity-ide.spec` or
+   `antigravity-app.spec`, commit the change, and tag (`ide-vX.Y.Z` or `app-vX.Y.Z`) on `main`.
 3. **GitHub → COPR Webhook**: This repo has a native GitHub webhook
    (Settings → Webhooks) pointed at COPR's push endpoint for this package.
    *Any* push to `main` — whether from this workflow's version-bump commit
@@ -86,12 +90,12 @@ repo" runs unattended, with no human in the loop:
    There's no custom trigger step to maintain; it's the same mechanism
    COPR uses for any GitHub-tracked SCM package.
 4. **COPR Build**: COPR clones this repo, runs `.copr/Makefile` (which
-   downloads the real tarballs for x86_64 and aarch64 from Google), and
-   builds the RPM via `antigravity-ide.spec`. As part of `%install`, the
+   downloads the real tarballs for x86_64 and aarch64 dynamically for the requested spec),
+   and builds the RPM via the corresponding spec file. As part of `%install`, the
    spec also clears `product.json`'s `updateUrl`, disabling the bundled
    in-app updater so it can't produce update notifications that disagree
-   with what's actually in the COPR repo (see **Keeping Antigravity IDE
-   Updated** above for why).
+   with what's actually in the COPR repo (see **Keeping Antigravity Updated**
+   above for why).
 5. **Published**: The RPM appears in the COPR repo, ready for `sudo dnf
    upgrade` — or fully unattended local installs via
    [`local-autoupdate/`](local-autoupdate/).
@@ -107,23 +111,32 @@ whether the *version* changed, since it fires on every push.
 ```
 .
 ├── .copr/
-│   └── Makefile                  # COPR SRPM build integration
+│   └── Makefile                        # Universal COPR SRPM build integration
 ├── .github/
 │   └── workflows/
-│       └── check-update.yml      # Daily version check + auto-update
-├── antigravity-ide.spec          # RPM spec file
-├── antigravity-ide.desktop       # Desktop launcher entry
-├── antigravity-ide-url-handler.desktop  # URL scheme handler
-├── antigravity-ide.appdata.xml   # AppStream metadata
-├── antigravity-ide-wrapper.sh    # CLI wrapper for /usr/bin/
-├── check-version.sh              # Version detection utility
-├── local-autoupdate/             # Optional: auto-install updates on your machine
-├── LICENSE                       # MIT (packaging scripts only)
-├── README.md                     # This file
-└── CONTRIBUTING.md               # Contribution guide
+│       ├── check-update-ide.yml        # Daily version check + auto-update for IDE
+│       └── check-update-app.yml        # Daily version check + auto-update for App
+├── antigravity-ide.spec                # RPM spec file (IDE)
+├── antigravity-ide.desktop             # Desktop launcher entry (IDE)
+├── antigravity-ide-url-handler.desktop # URL scheme handler (IDE)
+├── antigravity-ide.appdata.xml         # AppStream metadata (IDE)
+├── antigravity-ide-wrapper.sh          # CLI wrapper for /usr/bin/antigravity-ide
+├── check-version-ide.sh                # IDE version detection utility
+├── antigravity-app.spec                # RPM spec file (App)
+├── antigravity-app.desktop             # Desktop launcher entry (App)
+├── antigravity-app-url-handler.desktop # URL scheme handler (App)
+├── antigravity-app.appdata.xml         # AppStream metadata (App)
+├── antigravity-app-wrapper.sh          # CLI wrapper for /usr/bin/antigravity-app
+├── check-version-app.sh                # App version detection utility
+├── local-autoupdate/                   # Optional: auto-install updates on your machine
+├── LICENSE                             # MIT (packaging scripts only)
+├── README.md                           # This file
+└── CONTRIBUTING.md                     # Contribution guide
 ```
 
 ## 📦 What Gets Installed
+
+### Antigravity IDE (`antigravity-ide`)
 
 | Path | Description |
 |---|---|
@@ -134,9 +147,21 @@ whether the *version* changed, since it fires on every push.
 | `/usr/share/pixmaps/antigravity-ide.png` | Application icon |
 | `/usr/share/metainfo/antigravity-ide.appdata.xml` | AppStream metadata |
 
+### Antigravity App (`antigravity-app`)
+
+| Path | Description |
+|---|---|
+| `/opt/antigravity-app/` | Main application (upstream binary) |
+| `/usr/bin/antigravity-app` | CLI wrapper script |
+| `/usr/bin/antigravity` | Convenience symlink to `antigravity-app` |
+| `/usr/share/applications/antigravity-app.desktop` | Desktop launcher |
+| `/usr/share/applications/antigravity-app-url-handler.desktop` | URL scheme handler |
+| `/usr/share/pixmaps/antigravity-app.png` | Application icon |
+| `/usr/share/metainfo/antigravity-app.appdata.xml` | AppStream metadata |
+
 ## 🛠️ Building Locally
 
-If you want to build the RPM yourself:
+If you want to build the RPMs yourself:
 
 ```bash
 # Install build dependencies
@@ -145,19 +170,27 @@ sudo dnf install rpm-build rpmdevtools curl
 # Set up rpmbuild tree
 rpmdev-setuptree
 
-# Download the tarball
-curl -sL -o ~/rpmbuild/SOURCES/Antigravity.tar.gz "https://antigravity.google/download"
-
-# Copy sources
+# --- Option A: Build Antigravity IDE ---
+URL_X64=$(grep '^# URL_X64:' antigravity-ide.spec | awk '{print $3}')
+URL_ARM64=$(grep '^# URL_ARM64:' antigravity-ide.spec | awk '{print $3}')
+curl -sSLf -o ~/rpmbuild/SOURCES/Antigravity-x64.tar.gz "$URL_X64"
+curl -sSLf -o ~/rpmbuild/SOURCES/Antigravity-arm64.tar.gz "$URL_ARM64"
 cp antigravity-ide.desktop antigravity-ide-url-handler.desktop \
    antigravity-ide.appdata.xml antigravity-ide-wrapper.sh \
    ~/rpmbuild/SOURCES/
-
-# Build the RPM
 rpmbuild -ba antigravity-ide.spec
-
-# Install
 sudo dnf install ~/rpmbuild/RPMS/x86_64/antigravity-ide-*.rpm
+
+# --- Option B: Build Antigravity App ---
+URL_X64=$(grep '^# URL_X64:' antigravity-app.spec | awk '{print $3}')
+URL_ARM64=$(grep '^# URL_ARM64:' antigravity-app.spec | awk '{print $3}')
+curl -sSLf -o ~/rpmbuild/SOURCES/antigravity-app-x64.tar.gz "$URL_X64"
+curl -sSLf -o ~/rpmbuild/SOURCES/antigravity-app-arm64.tar.gz "$URL_ARM64"
+cp antigravity-app.desktop antigravity-app-url-handler.desktop \
+   antigravity-app.appdata.xml antigravity-app-wrapper.sh \
+   ~/rpmbuild/SOURCES/
+rpmbuild -ba antigravity-app.spec
+sudo dnf install ~/rpmbuild/RPMS/x86_64/antigravity-app-*.rpm
 ```
 
 ## 🤝 Contributing
@@ -181,12 +214,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details on:
 ## ⚖️ License
 
 - **Packaging scripts** (this repository): [MIT License](LICENSE)
-- **Antigravity IDE** (the application): Proprietary — see [Google's Terms](https://antigravity.google/terms)
+- **Antigravity Applications**: Proprietary — see [Google's Terms](https://antigravity.google/terms)
 
 The RPM binary is downloaded directly from Google's servers during the build process. This repository does not contain, redistribute, or modify any proprietary Google software.
 
 ## 🙏 Acknowledgments
 
-- [Google DeepMind](https://deepmind.google/) for creating Antigravity IDE
-- [Fedora COPR](https://copr.fedorainfracloud.org/) for the community build infrastructure
-- The Fedora community for making Linux packaging accessible
+- **Original Project**: Thanks to [Liviu Ionesi](https://github.com/liviuionesi) for creating the original [liviuionesi/antigravity-ide-rpm](https://github.com/liviuionesi/antigravity-ide-rpm) repository, which laid the solid foundation and automation design for this project.
+- **Google DeepMind**: For creating Google Antigravity.
+- **Fedora COPR**: For providing the excellent community build infrastructure.

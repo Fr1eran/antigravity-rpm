@@ -1,0 +1,13 @@
+[Unit]
+Description=Daily check for Antigravity App updates
+
+[Timer]
+# The upstream check-update-app.yml workflow runs at 06:30 UTC and the COPR
+# rebuild typically finishes within a few minutes; 10:30 local time leaves a
+# comfortable buffer.
+OnCalendar=*-*-* 10:30:00
+RandomizedDelaySec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

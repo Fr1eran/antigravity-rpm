@@ -1,0 +1,9 @@
+# Upstream downloaded tarballs & RPM artifacts
+*.tar.gz
+*.rpm
+*.src.rpm
+
+# Temporary files & version detection output
+version_info.txt
+*.tmp
+*.log
