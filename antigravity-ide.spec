@@ -16,7 +16,7 @@
 
 Name:           antigravity-ide
 Version:        2.6.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Google Antigravity IDE — An agentic AI development platform
 License:        LicenseRef-Google-Antigravity
 URL:            https://antigravity.google/
@@ -32,6 +32,7 @@ Source2:        antigravity-ide.desktop
 Source3:        antigravity-ide-url-handler.desktop
 Source4:        antigravity-ide.appdata.xml
 Source5:        antigravity-ide-wrapper.sh
+Source6:        antigravity-ide.png
 
 ExclusiveArch:  x86_64 aarch64
 
@@ -149,12 +150,13 @@ install -m 644 %{SOURCE3} %{buildroot}%{_datadir}/applications/
 mkdir -p %{buildroot}%{_datadir}/metainfo
 install -m 644 %{SOURCE4} %{buildroot}%{_datadir}/metainfo/
 
-# Icon (extract from upstream resources if available)
+# Icons (install to standard hicolor theme for KDE/GNOME and legacy pixmaps)
+mkdir -p %{buildroot}%{_datadir}/icons/hicolor/1024x1024/apps
+mkdir -p %{buildroot}%{_datadir}/icons/hicolor/512x512/apps
 mkdir -p %{buildroot}%{_datadir}/pixmaps
-if [ -f %{buildroot}%{install_dir}/resources/app/resources/linux/code.png ]; then
-    cp %{buildroot}%{install_dir}/resources/app/resources/linux/code.png \
-       %{buildroot}%{_datadir}/pixmaps/antigravity-ide.png
-fi
+install -m 644 %{SOURCE6} %{buildroot}%{_datadir}/icons/hicolor/1024x1024/apps/antigravity-ide.png
+install -m 644 %{SOURCE6} %{buildroot}%{_datadir}/icons/hicolor/512x512/apps/antigravity-ide.png
+install -m 644 %{SOURCE6} %{buildroot}%{_datadir}/pixmaps/antigravity-ide.png
 
 # Shell completions (if upstream provides them)
 if [ -d %{buildroot}%{install_dir}/resources/completions ]; then
@@ -170,12 +172,23 @@ fi
 chmod 4755 %{buildroot}%{install_dir}/chrome-sandbox 2>/dev/null || true
 
 # ============================================================================
+%post
+/usr/bin/update-desktop-database &> /dev/null || :
+/usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &> /dev/null || :
+
+%postun
+/usr/bin/update-desktop-database &> /dev/null || :
+/usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &> /dev/null || :
+
+# ============================================================================
 %files
 %{install_dir}/
 %{_bindir}/antigravity-ide
 %{_datadir}/applications/antigravity-ide.desktop
 %{_datadir}/applications/antigravity-ide-url-handler.desktop
 %{_datadir}/metainfo/antigravity-ide.appdata.xml
+%{_datadir}/icons/hicolor/1024x1024/apps/antigravity-ide.png
+%{_datadir}/icons/hicolor/512x512/apps/antigravity-ide.png
 %{_datadir}/pixmaps/antigravity-ide.png
 %dir %{_datadir}/bash-completion
 %dir %{_datadir}/bash-completion/completions
@@ -186,6 +199,10 @@ chmod 4755 %{buildroot}%{install_dir}/chrome-sandbox 2>/dev/null || true
 
 # ============================================================================
 %changelog
+* Wed Nov 04 2026 Maintainer <antigravity-rpm@users.noreply.github.com> - 2.6.0-2
+- Ship official 1024x1024 PNG icon in hicolor and pixmaps for full desktop compatibility
+- Add update-desktop-database and gtk-update-icon-cache scriptlets
+- Enable StartupNotify in desktop entry
 * Tue Oct 27 2026 Automated Update <antigravity-ide-rpm@users.noreply.github.com> - 2.6.0-1
 - Update to upstream version 2.6.0
 * Fri Aug 14 2026 Automated Update <antigravity-ide-rpm@users.noreply.github.com> - 2.5.5-1

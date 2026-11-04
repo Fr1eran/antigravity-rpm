@@ -14,7 +14,7 @@
 
 Name:           antigravity-app
 Version:        2.29.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Google Antigravity App — Agent orchestration platform
 License:        LicenseRef-Google-Antigravity
 URL:            https://antigravity.google/
@@ -30,6 +30,7 @@ Source2:        antigravity-app.desktop
 Source3:        antigravity-app-url-handler.desktop
 Source4:        antigravity-app.appdata.xml
 Source5:        antigravity-app-wrapper.sh
+Source6:        antigravity-app.png
 
 Provides:       antigravity = %{version}-%{release}
 ExclusiveArch:  x86_64 aarch64
@@ -136,18 +137,23 @@ install -m 644 %{SOURCE3} %{buildroot}%{_datadir}/applications/
 mkdir -p %{buildroot}%{_datadir}/metainfo
 install -m 644 %{SOURCE4} %{buildroot}%{_datadir}/metainfo/
 
-# Icon (extract from upstream resources if available)
+# Icons (install to standard hicolor theme for KDE/GNOME and legacy pixmaps)
+mkdir -p %{buildroot}%{_datadir}/icons/hicolor/512x512/apps
 mkdir -p %{buildroot}%{_datadir}/pixmaps
-ICON_SRC=$(find %{buildroot}%{install_dir} -name "code.png" -o -name "icon.png" -o -name "antigravity.png" | head -n 1)
-if [ -n "$ICON_SRC" ]; then
-    cp "$ICON_SRC" %{buildroot}%{_datadir}/pixmaps/antigravity-app.png
-else
-    # Fallback to a valid minimal PNG if upstream structure changes
-    printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\rIDATx\x9cc`\x00\x00\x00\x02\x00\x01H\xaf\xa4q\x00\x00\x00\x00IEND\xaeB`\x82' > %{buildroot}%{_datadir}/pixmaps/antigravity-app.png
-fi
+install -m 644 %{SOURCE6} %{buildroot}%{_datadir}/icons/hicolor/512x512/apps/antigravity-app.png
+install -m 644 %{SOURCE6} %{buildroot}%{_datadir}/pixmaps/antigravity-app.png
 
 # Ensure chrome-sandbox permissions (SUID)
 chmod 4755 %{buildroot}%{install_dir}/chrome-sandbox 2>/dev/null || true
+
+# ============================================================================
+%post
+/usr/bin/update-desktop-database &> /dev/null || :
+/usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &> /dev/null || :
+
+%postun
+/usr/bin/update-desktop-database &> /dev/null || :
+/usr/bin/gtk-update-icon-cache %{_datadir}/icons/hicolor &> /dev/null || :
 
 # ============================================================================
 %files
@@ -157,10 +163,15 @@ chmod 4755 %{buildroot}%{install_dir}/chrome-sandbox 2>/dev/null || true
 %{_datadir}/applications/antigravity-app.desktop
 %{_datadir}/applications/antigravity-app-url-handler.desktop
 %{_datadir}/metainfo/antigravity-app.appdata.xml
+%{_datadir}/icons/hicolor/512x512/apps/antigravity-app.png
 %{_datadir}/pixmaps/antigravity-app.png
 
 # ============================================================================
 %changelog
+* Wed Nov 04 2026 Maintainer <antigravity-rpm@users.noreply.github.com> - 2.29.0-2
+- Ship official 512x512 PNG icon in hicolor and pixmaps for full desktop compatibility
+- Add update-desktop-database and gtk-update-icon-cache scriptlets
+- Enable StartupNotify in desktop entry
 * Wed Nov 04 2026 Automated Update <antigravity-rpm@users.noreply.github.com> - 2.29.0-1
 - Update to upstream version 2.29.0
 - Initial community RPM package for Antigravity App
