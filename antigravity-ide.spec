@@ -15,15 +15,15 @@
 %global install_dir     /opt/%{name}
 
 Name:           antigravity-ide
-Version:        2.6.0
-Release:        2%{?dist}
+Version:        2.7.0
+Release:        1%{?dist}
 Summary:        Google Antigravity IDE — An agentic AI development platform
 License:        LicenseRef-Google-Antigravity
 URL:            https://antigravity.google/
 
 # The tarballs are downloaded at build time via the .copr/Makefile
-# URL_X64:        https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/2.6.0-5526304964083712/linux-x64/Antigravity%20IDE.tar.gz
-# URL_ARM64:      https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/2.6.0-5526304964083712/linux-arm/Antigravity%20IDE.tar.gz
+# URL_X64:        https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/2.7.0-4507555968450560/linux-x64/Antigravity%20IDE.tar.gz
+# URL_ARM64:      https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/2.7.0-4507555968450560/linux-arm/Antigravity%20IDE.tar.gz
 Source0:        Antigravity-x64.tar.gz
 Source1:        Antigravity-arm64.tar.gz
 
@@ -199,6 +199,8 @@ chmod 4755 %{buildroot}%{install_dir}/chrome-sandbox 2>/dev/null || true
 
 # ============================================================================
 %changelog
+* Fri Nov 13 2026 Automated Update <antigravity-rpm@users.noreply.github.com> - 2.7.0-1
+- Update to upstream version 2.7.0
 * Wed Nov 04 2026 Maintainer <antigravity-rpm@users.noreply.github.com> - 2.6.0-2
 - Ship official 1024x1024 PNG icon in hicolor and pixmaps for full desktop compatibility
 - Add update-desktop-database and gtk-update-icon-cache scriptlets
