@@ -13,15 +13,15 @@
 %global install_dir     /opt/%{name}
 
 Name:           antigravity-app
-Version:        2.33.0
+Version:        2.34.0
 Release:        1%{?dist}
 Summary:        Google Antigravity App — Agent orchestration platform
 License:        LicenseRef-Google-Antigravity
 URL:            https://antigravity.google/
 
 # The tarballs are downloaded at build time via the .copr/Makefile
-# URL_X64:        https://storage.googleapis.com/antigravity-public/antigravity-hub/2.33.0-4731201358004224/linux-x64/Antigravity.tar.gz
-# URL_ARM64:      https://storage.googleapis.com/antigravity-public/antigravity-hub/2.33.0-4731201358004224/linux-arm/Antigravity.tar.gz
+# URL_X64:        https://storage.googleapis.com/antigravity-public/antigravity-hub/2.34.0-5887025308631040/linux-x64/Antigravity.tar.gz
+# URL_ARM64:      https://storage.googleapis.com/antigravity-public/antigravity-hub/2.34.0-5887025308631040/linux-arm/Antigravity.tar.gz
 Source0:        antigravity-app-x64.tar.gz
 Source1:        antigravity-app-arm64.tar.gz
 
@@ -168,6 +168,8 @@ chmod 4755 %{buildroot}%{install_dir}/chrome-sandbox 2>/dev/null || true
 
 # ============================================================================
 %changelog
+* Sat Nov 21 2026 Automated Update <antigravity-rpm@users.noreply.github.com> - 2.34.0-1
+- Update to upstream version 2.34.0
 * Wed Nov 18 2026 Automated Update <antigravity-rpm@users.noreply.github.com> - 2.33.0-1
 - Update to upstream version 2.33.0
 * Tue Nov 17 2026 Automated Update <antigravity-rpm@users.noreply.github.com> - 2.32.2-1
